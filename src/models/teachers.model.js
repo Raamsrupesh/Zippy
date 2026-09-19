@@ -21,7 +21,8 @@ const TeachersSchema = new mongoose.Schema({
                 return pswd.startsWith('$argon')
             },
             msg:"Re-enter the password"
-        }
+        },
+        select:false
     },
     department:{
         type:String,
