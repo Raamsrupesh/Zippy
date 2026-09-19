@@ -4,7 +4,8 @@ const questionsModel = new mongoose.Schema({
     assignmentId:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"Assignment",
-        required:true
+        required:true,
+        select:false
     },
     questionText:{
         type:String,

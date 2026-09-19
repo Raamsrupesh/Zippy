@@ -1,11 +1,6 @@
 import mongoose from "mongoose";
 
 const submissionsModel = new mongoose.Schema({
-    assignmentID:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"Assignment",
-        required:true
-    },
     studentId:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"Student",
