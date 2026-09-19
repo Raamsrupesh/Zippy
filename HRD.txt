@@ -1,0 +1,35 @@
+TEACHER
+   ↓
+Create assignment
+   ↓
+Add English questions
+   ↓
+Add marking scheme
+   ↓
+STUDENT
+   ↓
+View assignment
+   ↓
+Answer questions
+   ↓
+Submit
+   ↓
+Mock Evaluation Service
+   ↓
+Generate simulated marks + feedback
+   ↓
+Save evaluation
+   ↓
+TEACHER
+   ↓
+View student's answers
+   ↓
+View generated marks
+   ↓
+Edit marks/feedback
+   ↓
+Approve result
+   ↓
+STUDENT
+   ↓
+View final approved result
