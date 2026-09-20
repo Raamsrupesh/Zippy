@@ -269,7 +269,7 @@ export async function approveTheAssignmentForThisStudent(req, res, next) {
         const {studentId} = req.params;
         const {assignmentId} = req.params;
         
-        await Evaluations.findOneAndUpdate({studentId, assignmentId}, {status:"APPROVED"});
+        await Evaluation.findOneAndUpdate({studentId, assignmentId}, {status:"APPROVED"});
         return res.status(200).json({msg : "Successfully updated the evaluations!!"});
         
     } catch (error) {
@@ -288,7 +288,7 @@ export async function updateTheMarksForThisStudent(req, res, next) {
         
         const {mockMarks, mockFeedback} = req.body;
         if(mockFeedback !== "") await Evaluations.findOneAndUpdate({studentId, assignmentId}, {mockMarks, mockFeedback, status:"APPROVED"});
-        else await Evaluations.findOneAndUpdate({studentId, assignmentId}, {mockMarks, status:"APPROVED"});
+        else await Evaluation.findOneAndUpdate({studentId, assignmentId}, {mockMarks, status:"APPROVED"});
         return res.status(200).json({msg : "Successfully updated the evaluations!!"});
         
     } catch (error) {

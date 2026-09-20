@@ -2,10 +2,13 @@ import {Student} from '../models/student.model.js'
 import {Assignment} from '../models/assignment.model.js'
 import { SubmissionAnswer } from '../models/submissionanswer.model.js';
 import {Submission} from '../models/submission.model.js';
+import { Evaluation } from '../models/evaluation.model.js';
+import { EvaluationQuestion } from '../models/evaluationquestion.model.js';
+import { Question } from '../models/questions.model.js';
 
 export async function viewAssignments(req, res, next) {
     try {
-        const {studentId} = req;
+        const studentId = req.get("studentId");
         const studentDet = await Student.findById(studentId);
         if(!studentDet) return res.status(404).json({msg : "Student not found."});
         if(studentDet.batchNo){
@@ -23,7 +26,7 @@ export async function viewAssignments(req, res, next) {
 
 export async function viewAnAssignment(req, res, next) {
     try {
-        const {studentId} = req;
+        const studentId = req.get("studentId");
         const {assignmentId} = req.params;
         const studentDet = await Student.findById(studentId);
         if(!studentDet) return res.status(404).json({msg : "Student not found."});
@@ -44,7 +47,7 @@ export async function viewAnAssignment(req, res, next) {
 
 export async function answerQuestionSubmit(req, res, next) {
     try {
-        const {studentId} = req;
+        const studentId = req.get("studentId");
         const {assignmentId} = req.params;
         const {questionId} = req.params;
         const {answerText} = req.body;
@@ -72,3 +75,39 @@ export async function answerQuestionSubmit(req, res, next) {
     }
 }
 
+export async function viewThePrecisedResults(req, res, next) {
+    try {
+        const {assignmentId} = req.params;
+        const questionDet = await Question.find({assignmentId});
+        const combinedArray = [];
+        for (let i = 0; i < questionDet.length; i++) {
+            const evaluationDet = await EvaluationQuestion.findOne({questionId:questionDet[i]._id});
+            const submissionAnswerDet = await SubmissionAnswer.findOne({questionId:questionDet[i]._id});
+            combinedArray.push({question:questionDet[i], givenAnswer:submissionAnswerDet, evaluation:evaluationDet});
+        }
+        return res.status(200).json({data : combinedArray});
+    } catch (error) {
+        error.functionName = "viewThePrecisedResults";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);        
+    }
+    
+}
+
+export async function viewOverallMarks(req, res, next) {
+    try {
+        const studentId = req.get("studentId");
+        const {assignmentId} = req.params;
+        const submissionDet = await Submission.findOne({studentId, assignmentId});
+        
+        const evaluationDet = await Evaluation.findOne({submissionId:submissionDet._id});
+        return res.status(200).json({data : evaluationDet});
+        
+    } catch (error) {
+        error.functionName = "viewTheResults";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);       
+    }
+}
