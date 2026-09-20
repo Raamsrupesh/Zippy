@@ -5,6 +5,21 @@ import {Submission} from '../models/submission.model.js';
 import { Evaluation } from '../models/evaluation.model.js';
 import { EvaluationQuestion } from '../models/evaluationquestion.model.js';
 import { Question } from '../models/questions.model.js';
+import {studentInsertionValidations} from '../validations/student.validations.js'
+export async function insertingDoc(req, res, next) {
+    try {
+        const {data, error} = await studentInsertionValidations.safeParse(req.body);
+        if(error) return res.status(400).json({msg : error.errors[0].message});
+
+        await Student.insertOne(data);
+        return res.status(201).json({msg : "Inserted the student doc!!"});
+    } catch (error) {
+        error.functionName = "insertingDoc";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
 
 export async function viewAssignments(req, res, next) {
     try {
@@ -51,7 +66,7 @@ export async function answerQuestionSubmit(req, res, next) {
         const {assignmentId} = req.params;
         const {questionId} = req.params;
         const {answerText} = req.body;
-
+        if(answerText === "") return res.status(400).json({msg : "No answer exists."});
         const studentDet = await Student.findById(studentId);
         const assignmentDet = await Assignment.findById(assignmentId);
         if(!studentDet) return res.status(404).json({msg : "Student not found."});

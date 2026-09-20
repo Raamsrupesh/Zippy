@@ -5,13 +5,16 @@ import {Evaluation} from '../models/evaluation.model.js';
 import {SubmissionAnswer} from '../models/submissionanswer.model.js'
 import {EvaluationQuestion} from '../models/evaluationquestion.model.js';
 import {isTeacherAuthorizedForThisBatch} from '../utils/teacherBatchAuth.utils.js'
+import {teacherInsertionValidations} from '../validations/teacher.validations.js'
+import {assignmentInsertionValidations} from '../validations/assignment.validations.js'
 import { Teacher } from "../models/teachers.model.js";
 import { log } from "node:console";
 
 export async function insertingDoc(req, res, next) {
     try {
-        const {name, email, password, department, batchNo} = req.body;
-        await Teacher.insertOne({name, email, password, department, batchNo});
+        const {data, error} = await teacherInsertionValidations.safeParse(req.body);
+        if(error) return res.status(400).json({msg : error.errors[0].message})
+        await Teacher.insertOne(data);
         return res.status(201).json({msg : "Inserted the teacher doc!!"});
     } catch (error) {
         error.functionName = "insertingDoc";
@@ -25,11 +28,13 @@ export async function creatingAssignment(req, res, next) {
     try {
         const teacherId = req.get("teacherId");
         if(!teacherId) return res.status(400).json({msg : "No teacherId present."});
-        const {title, description, totalMarks, batchNo} = req.body;
+        
+        const{data, error} = await assignmentInsertionValidations.safeParse(req.body);
+        if(error) return res.status(400).json({msg : error.errors[0].message});
         // Validations
 
         if(await isTeacherAuthorizedForThisBatch(teacherId, batchNo)){
-            await Assignment.insertOne({title, description, totalMarks, teacherId, batchNo});
+            await Assignment.insertOne(data);
             return res.status(201).json({msg : "Created assignment successfully!!"});
         }
         return res.status(400).json({msg :"You aren't allocated to this batch..."});
