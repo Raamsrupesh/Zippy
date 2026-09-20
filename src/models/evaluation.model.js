@@ -1,16 +1,6 @@
 import mongoose from "mongoose";
 
 const evaluationSchema = new mongoose.Schema({
-    studentId:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"Student",
-        required:true
-    },
-    assignmentId:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"Assignment",
-        required:true
-    },
     submissionId:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"Submissions",
@@ -31,4 +21,4 @@ const evaluationSchema = new mongoose.Schema({
     }
 });
 
-export const Evaluations = mongoose.model("Evaluation", evaluationSchema);
+export const Evaluation = mongoose.model("Evaluation", evaluationSchema);

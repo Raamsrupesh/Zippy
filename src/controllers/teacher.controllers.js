@@ -1,16 +1,38 @@
 import { Assignment } from "../models/assignment.model.js";
 import {Question} from '../models/questions.model.js';
 import {Submission} from '../models/submission.model.js';
-import {Evaluations} from '../models/evaluation.model.js';
+import {Evaluation} from '../models/evaluation.model.js';
 import {SubmissionAnswer} from '../models/submissionanswer.model.js'
 import {EvaluationQuestion} from '../models/evaluationquestion.model.js';
+import {isTeacherAuthorizedForThisBatch} from '../utils/teacherBatchAuth.utils.js'
+import { Teacher } from "../models/teachers.model.js";
+import { log } from "node:console";
+
+export async function insertingDoc(req, res, next) {
+    try {
+        const {name, email, password, department, batchNo} = req.body;
+        await Teacher.insertOne({name, email, password, department, batchNo});
+        return res.status(201).json({msg : "Inserted the teacher doc!!"});
+    } catch (error) {
+        error.functionName = "insertingDoc";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
 
 export async function creatingAssignment(req, res, next) {
     try {
-        const {teacherId} = req;
-        const {title, description, totalMarks} = req.body;
-        await Assignment.insertOne({title, description, totalMarks, teacherId});
-        return res.status(201).json({msg : "Created assignment successfully!!"});
+        const teacherId = req.get("teacherId");
+        if(!teacherId) return res.status(400).json({msg : "No teacherId present."});
+        const {title, description, totalMarks, batchNo} = req.body;
+        // Validations
+
+        if(isTeacherAuthorizedForThisBatch(teacherId, batchNo)){
+            await Assignment.insertOne({title, description, totalMarks, teacherId, batchNo});
+            return res.status(201).json({msg : "Created assignment successfully!!"});
+        }
+        return res.status(400).json({msg :"You aren't allocated to this batch..."});
     } catch (error) {
         error.functionName = "creatingAssignment";
         error.statusCode = 500;
@@ -21,7 +43,7 @@ export async function creatingAssignment(req, res, next) {
 
 export async function fetchAnAssignment(req, res, next) {
     try {
-        const {teacherId} = req;
+        const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
         const assignmentDet = await Assignment.findById(assignmentId);
         return res.status(201).json({data : assignmentDet});
@@ -35,7 +57,7 @@ export async function fetchAnAssignment(req, res, next) {
 
 export async function deletingAnAssignment(req, res, next) {
     try {
-        const {teacherId} = req;
+        const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
         await Assignment.findByIdAndDelete(assignmentId);
         return res.status(201).json({msg : "Successfully deleted!!"});
@@ -50,7 +72,7 @@ export async function deletingAnAssignment(req, res, next) {
 export async function updatingAnAssignment(req, res, next) {
     try {
 
-        const {teacherId} = req;
+        const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
         const {title, description, totalMarks} = req.body;
         const assignmentDet = await Assignment.findByIdAndUpdate(assignmentId, {title, description, totalMarks, teacherId});
@@ -66,7 +88,7 @@ export async function updatingAnAssignment(req, res, next) {
 
 export async function postingQuestions(req, res, next) {
     try {
-        const {teacherId} = req;
+        const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
         const {questionsDetails} = req.body;
         questionsDetails.forEach(async (questionDetails) => {
@@ -125,7 +147,7 @@ export async function updateAQuestionMarks(req, res, next) {
     }
 }
 
-export async function updateAQuestionMarks(req, res, next) {
+export async function updateAMarkingScheme(req, res, next) {
     try {
         const {questionId} = req.params;
         const {markingScheme} = req.body;
@@ -168,7 +190,7 @@ export async function deleteAQuestion(req, res, next) {
 
 export async function viewAllStudentsAnswers(req, res, next) {
     try {
-        const {teacherId} = req;
+        const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
 
         const assignmentDet = await Assignment.findById(assignmentId);
@@ -225,7 +247,7 @@ export async function compareAllQAndAsWithEvaluationsOfStudent(req, res, next) {
 
 export async function approveTheAssignmentForThisStudent(req, res, next) {
     try {
-        const {teacherId} = req;
+        const teacherId = req.get("teacherId");
         const {studentId} = req.params;
         const {assignmentId} = req.params;
         
@@ -242,7 +264,7 @@ export async function approveTheAssignmentForThisStudent(req, res, next) {
 
 export async function updateTheMarksForThisStudent(req, res, next) {
     try {
-        const {teacherId} = req;
+        const teacherId = req.get("teacherId");
         const {studentId} = req.params;
         const {assignmentId} = req.params;
         
@@ -253,6 +275,52 @@ export async function updateTheMarksForThisStudent(req, res, next) {
         
     } catch (error) {
         error.functionName = "updateTheMarksForThisStudent";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
+export async function makeTheAssignmentLive(req, res, next) {
+    try {
+        const teacherId = req.get("teacherId"); 
+        const {assignmentId} = req.params;
+
+        const assignmentDet = await Assignment.findById(assignmentId);
+        const teacherDet = await Teacher.findById(teacherId);
+        if(teacherDet.batchNo.includes(assignmentDet.batchNo)){
+            assignmentDet.status = "LIVE";
+            await assignmentDet.save();
+
+            return res.status(200).json({msg : "Successfully made this assignment live!"});
+        }
+        return res.status(403).json({msg : "Sorry, You aren't authorized to make this assignment live!"});
+
+    } catch (error) {
+        error.functionName = "makeTheAssignmentLive";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
+export async function closeTheAssignment(req, res, next) {
+    try {
+        const teacherId = req.get("teacherId"); 
+        const {assignmentId} = req.params;
+
+        const assignmentDet = await Assignment.findById(assignmentId);
+        const teacherDet = await Teacher.findById(teacherId);
+        if(teacherDet.batchNo.includes(assignmentDet.batchNo)){
+            assignmentDet.status = "CLOSED";
+            await assignmentDet.save();
+
+            return res.status(200).json({msg : "Successfully closed this assignment!"});
+        }
+        return res.status(403).json({msg : "Sorry, You aren't authorized to close this assignment!"});
+
+    } catch (error) {
+        error.functionName = "closeTheAssignment";
         error.statusCode = 500;
         error.msg = "Something went wrong."
         return next(error);

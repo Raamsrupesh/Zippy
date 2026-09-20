@@ -2,10 +2,15 @@ import mongoose from "mongoose"
 
 const evaluationQuestionSchema = new mongoose.Schema({
     submissionId:{
-        typs:mongoose.Schema.Types.ObjectId,
-        ref:"Question",
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"Submission",
         required:true,
         select:false
+    },
+    questionId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"Question",
+        required:true,
     },
     evaluatedMarks:{
         type:Number,
@@ -16,4 +21,4 @@ const evaluationQuestionSchema = new mongoose.Schema({
     }
 });
 
-export const EvaluationQuestion = mongoose.model("Submission", evaluationQuestionSchema);
+export const EvaluationQuestion = mongoose.model("EvaluationQuestion", evaluationQuestionSchema);

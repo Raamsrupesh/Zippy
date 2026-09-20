@@ -5,7 +5,9 @@ export async function studentMiddleware(req, res, next) {
         if(!role) return res.status(403).json({msg : "Without being a member, access is forbidden."});
 
         if(role != "STUDENT") return res.status(400).json({msg : "The content is only for students!"});
+        if(!req.headers.studentid) return res.status(400).json({msg : "studentId header is required."});
 
+        req.studentId = req.headers.studentid;
         next();
     } catch (error) {
         error.functionName = "studentMiddleware";

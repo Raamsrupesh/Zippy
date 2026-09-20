@@ -20,6 +20,17 @@ const assignmentModel = new mongoose.Schema({
     totalMarks:{
         type:Number,
         required:true
+    },
+    batchNo:{
+        type:Number,
+        enum:[12345, 12344, 12346, 12347, 12348, 12349, 12350],
+        required:true
+    },
+    status:{
+        type:String,
+        enum:['PENDING', 'LIVE', 'CLOSED'],
+        default:"PENDING",
+        required:true
     }
 },{timestamps:true});
 

@@ -6,7 +6,6 @@ const TeachersSchema = new mongoose.Schema({
     name:{
         type:String,
         required:true,
-        unique:true,
     },
     email:{
         type:String,
@@ -16,12 +15,12 @@ const TeachersSchema = new mongoose.Schema({
     password:{
         type:String,
         required:true,
-        validate:{
-            validator: function(pswd){
-                return pswd.startsWith('$argon')
-            },
-            msg:"Re-enter the password"
-        },
+        // validate:{
+        //     validator: function(pswd){
+        //         return pswd.startsWith('$argon')
+        //     },
+        //     msg:"Re-enter the password"
+        // },
         select:false
     },
     department:{
@@ -29,14 +28,26 @@ const TeachersSchema = new mongoose.Schema({
         enum:['GRAMMAR AND VOCABULARY', 'SOFT SKILLS', 'SPOKEN ENGLISH'],
         required:true,
         default:"GRAMMAR AND VOCABULARY"
+    },
+    batchNo:{
+        type:Array,
+        required:true
     }
 }, 
-{timestamps:1});
+{timestamps:true});
 
-TeachersSchema.pre("save", async function (next){
-    this.password = await argon2.hash(this.password);
-    next();
-})
+// TeachersSchema.pre("save", async function (next){
+//     if (!this.isModified("password")) {
+//     return next();
+//   }
+
+//   try {
+//     this.password = await argon2.hash(this.password);
+//     next();
+//   } catch (error) {
+//     next(error);
+//   }
+// })
 TeachersSchema.post("save", function (doc){
     log("Recieved a teacher's data: ", doc.name)
 })

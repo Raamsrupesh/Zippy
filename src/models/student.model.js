@@ -18,6 +18,11 @@ const studentSchema = new mongoose.Schema({
     department:{
         type:String,
         required:true
+    },
+    batchNo:{
+        type:Number,
+        enum:[12345, 12344, 12346, 12347, 12348, 12349, 12350],
+        required:true
     }
 });
 
