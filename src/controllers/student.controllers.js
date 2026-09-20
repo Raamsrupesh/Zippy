@@ -105,7 +105,7 @@ export async function viewOverallMarks(req, res, next) {
         return res.status(200).json({data : evaluationDet});
         
     } catch (error) {
-        error.functionName = "viewTheResults";
+        error.functionName = "viewOverallMarks";
         error.statusCode = 500;
         error.msg = "Something went wrong."
         return next(error);       
