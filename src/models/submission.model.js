@@ -10,11 +10,8 @@ const submissionsModel = new mongoose.Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:"Assignment",
         required:true
-    },
-    answers:{
-        type:Array,
-        required:true,
     }
+    
 }, {timestamps:true});
 
-export const Submissions = mongoose.model("Submissions", submissionsModel);
+export const Submission = mongoose.model("Submission", submissionsModel);

@@ -26,9 +26,9 @@ const evaluationSchema = new mongoose.Schema({
     },
     status:{
         type:String,
-        enum:['APPROVED', 'PENDING', 'NOT YET STARTED'],
+        enum:['APPROVED', 'PENDING'],
         required:true
     }
-})
+});
 
 export const Evaluations = mongoose.model("Evaluation", evaluationSchema);

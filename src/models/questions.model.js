@@ -17,9 +17,9 @@ const questionsModel = new mongoose.Schema({
     },
     markingScheme:{
         type:String,
-        default:"COMMON"
+        trim:true
     }
 });
 
 
-export const Questions = mongoose.model("Questions", questionsModel);
+export const Question = mongoose.model("Question", questionsModel);

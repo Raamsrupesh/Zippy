@@ -14,7 +14,8 @@ const assignmentModel = new mongoose.Schema({
     teacherId:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"Teacher",
-        required:true
+        required:true,
+        select:false
     },
     totalMarks:{
         type:Number,

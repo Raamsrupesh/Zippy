@@ -1,7 +1,10 @@
 import { Assignment } from "../models/assignment.model.js";
-import {Questions} from '../models/questions.model.js';
-import {Submissions} from '../models/submission.model.js'
-import {Evaluations} from '../models/evaluation.model.js'
+import {Question} from '../models/questions.model.js';
+import {Submission} from '../models/submission.model.js';
+import {Evaluations} from '../models/evaluation.model.js';
+import {SubmissionAnswer} from '../models/submissionanswer.model.js'
+import {EvaluationQuestion} from '../models/evaluationquestion.model.js';
+
 export async function creatingAssignment(req, res, next) {
     try {
         const {teacherId} = req;
@@ -16,13 +19,58 @@ export async function creatingAssignment(req, res, next) {
     }
 }
 
+export async function fetchAnAssignment(req, res, next) {
+    try {
+        const {teacherId} = req;
+        const {assignmentId} = req.params;
+        const assignmentDet = await Assignment.findById(assignmentId);
+        return res.status(201).json({data : assignmentDet});
+    } catch (error) {
+        error.functionName = "fetchAnAssignment";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
+export async function deletingAnAssignment(req, res, next) {
+    try {
+        const {teacherId} = req;
+        const {assignmentId} = req.params;
+        await Assignment.findByIdAndDelete(assignmentId);
+        return res.status(201).json({msg : "Successfully deleted!!"});
+    } catch (error) {
+        error.functionName = "deletingAnAssignment";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
+export async function updatingAnAssignment(req, res, next) {
+    try {
+
+        const {teacherId} = req;
+        const {assignmentId} = req.params;
+        const {title, description, totalMarks} = req.body;
+        const assignmentDet = await Assignment.findByIdAndUpdate(assignmentId, {title, description, totalMarks, teacherId});
+        return res.status(201).json({data : assignmentDet});
+
+    } catch (error) {
+        error.functionName = "updatingAnAssignment";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
 export async function postingQuestions(req, res, next) {
     try {
         const {teacherId} = req;
         const {assignmentId} = req.params;
         const {questionsDetails} = req.body;
         questionsDetails.forEach(async (questionDetails) => {
-            await Questions.insertOne(
+            await Question.insertOne(
                 {assignmentId, ...questionDetails}
             )
         });
@@ -36,30 +84,144 @@ export async function postingQuestions(req, res, next) {
     }
 }
 
-/*
-export async function viewStudentsAnswers(req, res, next) {
+export async function fetchAquestion(req, res, next) {
     try {
-        const {teacherId} = req;
-        const {assignmentId} = req.params;
-
-        const assignment_det = await Assignment.findById(assignmentId);
-        const student_subs = await Submissions.findOne({assignmentId});
-        const questions = await Questions.findOne({assignmentId});
-        const evaluationMarks = await Evaluations.findOne({submissionId:student_subs._id});
-        const eachArray = [];
-        for (let index = 0; index < student_subs.length; index++) {
-            eachArray.push({`Question ${index}`: questions[index],`${index}`:student_subs.answers[index]}); 
-        }
-        return res.status(200).json({data:[{assignment_det}, {studentId:student_subs.studentId}, {comparisionTable:eachArray}, {evaluationMarks}]})
-
+        const {questionId} = req.params;
+        const question = await Question.findById(questionId);
+        return res.status(200).json({data : question});
     } catch (error) {
-        error.functionName = "viewStudentsAnswers";
+        error.functionName = "fetchAquestion";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }    
+}
+
+export async function updateAQuestionText(req, res, next) {
+    try {
+        const {questionId} = req.params;
+        const {questionText} = req.body;
+        const question = await Question.findByIdAndUpdate(questionId, {questionText});
+        return res.status(200).json({data : question});
+    } catch (error) {
+        error.functionName = "updateAQuestionText";
         error.statusCode = 500;
         error.msg = "Something went wrong."
         return next(error);
     }
 }
-*/
+
+export async function updateAQuestionMarks(req, res, next) {
+    try {
+        const {questionId} = req.params;
+        const {maxMarks} = req.body;
+        const question = await Question.findByIdAndUpdate(questionId, {maxMarks});
+        return res.status(200).json({data : question});
+    } catch (error) {
+        error.functionName = "updateAQuestionMarks";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
+export async function updateAQuestionMarks(req, res, next) {
+    try {
+        const {questionId} = req.params;
+        const {markingScheme} = req.body;
+        const question = await Question.findByIdAndUpdate(questionId, {markingScheme});
+        return res.status(200).json({data : question});
+    } catch (error) {
+        error.functionName = "updateAQuestionMarks";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
+export async function updateACompleteQuestion(req, res, next) {
+    try {
+        const {questionId} = req.params;
+        const {markingScheme, maxMarks, questionText} = req.body;
+        const question = await Question.findByIdAndUpdate(questionId, {markingScheme, maxMarks, questionText});
+        return res.status(200).json({data : question});
+    } catch (error) {
+        error.functionName = "updateACompleteQuestion";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
+export async function deleteAQuestion(req, res, next) {
+    try {
+        const {questionId} = req.params;
+        await Question.findByIdAndDelete(questionId);
+        return res.status(200).json({msg : "Successfully deleted!!"});
+    } catch (error) {
+        error.functionName = "deleteAQuestion";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
+export async function viewAllStudentsAnswers(req, res, next) {
+    try {
+        const {teacherId} = req;
+        const {assignmentId} = req.params;
+
+        const assignmentDet = await Assignment.findById(assignmentId);
+        const studentSubs = await SubmissionAnswer.find({});
+                
+        return res.status(200).json({data:[{assignmentDet}, {studentSubs}]});
+
+    } catch (error) {
+        error.functionName = "viewAllStudentsAnswers";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
+export async function compareAllQuestionsAndAnswersOfStudent(req, res, next){
+    try {
+        const {submissionId} = req.params;
+        const submission = await Submission.findById(submissionId);
+        const allQuestions = await Question.find({assignmentId: submission.assignmentId});
+        const submittedAnswers = await SubmissionAnswer.find({submissionId});
+
+        const questionAnswersArray = [];
+        questionAnswersArray.push({question: allQuestions[i], answer:submittedAnswers[i]});
+
+        return res.status(200).json({questionAnswersArray});
+    } catch (error) {
+        error.functionName = "compareAllQuestionsAndAnswersOfStudent";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
+export async function compareAllQAndAsWithEvaluationsOfStudent(req, res, next) {
+    try {
+        const {submissionId} = req.params;
+        const submission = await Submission.findById(submissionId);
+        const allQuestions = await Question.find({assignmentId: submission.assignmentId});
+        const submittedAnswers = await SubmissionAnswer.find({submissionId});
+        const evaluatedQuestions = await EvaluationQuestion.find({submissionId});
+        
+        const qaEvaluationsArray = [];
+        qaEvaluationsArray.push({question: allQuestions[i], answer:submittedAnswers[i], evaluation: evaluatedQuestions[i]});
+        
+        return res.status(200).json({questionAnswersArray});
+    } catch (error) {
+        error.functionName = "compareAllQAndAsWithEvaluationsOfStudent";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
 
 export async function approveTheAssignmentForThisStudent(req, res, next) {
     try {
@@ -92,7 +254,7 @@ export async function updateTheMarksForThisStudent(req, res, next) {
     } catch (error) {
         error.functionName = "updateTheMarksForThisStudent";
         error.statusCode = 500;
-        error.msg = "Somethin went wrong."
+        error.msg = "Something went wrong."
         return next(error);
     }
 }
