@@ -15,7 +15,7 @@ router.patch("/questionMS/:questionId", updateAMarkingScheme);
 router.patch("/question/:questionId", updateACompleteQuestion);
 router.delete("/:questionId", deleteAQuestion);
 router.get("/assignment/answers/:assignmentId", viewAllStudentsAnswers);
-router.get("/assignment/compareQAs/:assignmentId", compareAllQuestionsAndAnswersOfStudent);
-router.get("/assignment/compareQAswithEval/:assignmentId", compareAllQAndAsWithEvaluationsOfStudent);
+router.get("/assignment/compareQAs/:submissionId", compareAllQuestionsAndAnswersOfStudent);
+router.get("/assignment/compareQAswithEval/:submissionId", compareAllQAndAsWithEvaluationsOfStudent);
 
 export default router;

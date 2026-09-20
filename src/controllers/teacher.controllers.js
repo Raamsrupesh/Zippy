@@ -28,7 +28,7 @@ export async function creatingAssignment(req, res, next) {
         const {title, description, totalMarks, batchNo} = req.body;
         // Validations
 
-        if(isTeacherAuthorizedForThisBatch(teacherId, batchNo)){
+        if(await isTeacherAuthorizedForThisBatch(teacherId, batchNo)){
             await Assignment.insertOne({title, description, totalMarks, teacherId, batchNo});
             return res.status(201).json({msg : "Created assignment successfully!!"});
         }
@@ -46,7 +46,8 @@ export async function fetchAnAssignment(req, res, next) {
         const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
         const assignmentDet = await Assignment.findById(assignmentId);
-        return res.status(201).json({data : assignmentDet});
+        if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        return res.status(200).json({data : assignmentDet});
     } catch (error) {
         error.functionName = "fetchAnAssignment";
         error.statusCode = 500;
@@ -59,8 +60,9 @@ export async function deletingAnAssignment(req, res, next) {
     try {
         const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
-        await Assignment.findByIdAndDelete(assignmentId);
-        return res.status(201).json({msg : "Successfully deleted!!"});
+        const assignmentDet = await Assignment.findByIdAndDelete(assignmentId);
+        if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        return res.status(200).json({msg : "Successfully deleted!!"});
     } catch (error) {
         error.functionName = "deletingAnAssignment";
         error.statusCode = 500;
@@ -75,8 +77,9 @@ export async function updatingAnAssignment(req, res, next) {
         const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
         const {title, description, totalMarks} = req.body;
-        const assignmentDet = await Assignment.findByIdAndUpdate(assignmentId, {title, description, totalMarks, teacherId});
-        return res.status(201).json({data : assignmentDet});
+        const assignmentDet = await Assignment.findByIdAndUpdate(assignmentId, {title, description, totalMarks, teacherId}, {new:true});
+        if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        return res.status(200).json({data : assignmentDet});
 
     } catch (error) {
         error.functionName = "updatingAnAssignment";
@@ -91,11 +94,11 @@ export async function postingQuestions(req, res, next) {
         const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
         const {questionsDetails} = req.body;
-        questionsDetails.forEach(async (questionDetails) => {
-            await Question.insertOne(
-                {assignmentId, ...questionDetails}
-            )
-        });
+        const assignmentDet = await Assignment.findById(assignmentId);
+        if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        await Promise.all(questionsDetails.map((questionDetails) =>
+            Question.insertOne({assignmentId, ...questionDetails})
+        ));
         return res.status(201).json({msg : "Inserted all the questions in the database."});
 
     } catch (error) {
@@ -110,6 +113,7 @@ export async function fetchAquestion(req, res, next) {
     try {
         const {questionId} = req.params;
         const question = await Question.findById(questionId);
+        if(!question) return res.status(404).json({msg : "Question not found."});
         return res.status(200).json({data : question});
     } catch (error) {
         error.functionName = "fetchAquestion";
@@ -123,7 +127,8 @@ export async function updateAQuestionText(req, res, next) {
     try {
         const {questionId} = req.params;
         const {questionText} = req.body;
-        const question = await Question.findByIdAndUpdate(questionId, {questionText});
+        const question = await Question.findByIdAndUpdate(questionId, {questionText}, {new:true});
+        if(!question) return res.status(404).json({msg : "Question not found."});
         return res.status(200).json({data : question});
     } catch (error) {
         error.functionName = "updateAQuestionText";
@@ -137,7 +142,8 @@ export async function updateAQuestionMarks(req, res, next) {
     try {
         const {questionId} = req.params;
         const {maxMarks} = req.body;
-        const question = await Question.findByIdAndUpdate(questionId, {maxMarks});
+        const question = await Question.findByIdAndUpdate(questionId, {maxMarks}, {new:true});
+        if(!question) return res.status(404).json({msg : "Question not found."});
         return res.status(200).json({data : question});
     } catch (error) {
         error.functionName = "updateAQuestionMarks";
@@ -151,10 +157,11 @@ export async function updateAMarkingScheme(req, res, next) {
     try {
         const {questionId} = req.params;
         const {markingScheme} = req.body;
-        const question = await Question.findByIdAndUpdate(questionId, {markingScheme});
+        const question = await Question.findByIdAndUpdate(questionId, {markingScheme}, {new:true});
+        if(!question) return res.status(404).json({msg : "Question not found."});
         return res.status(200).json({data : question});
     } catch (error) {
-        error.functionName = "updateAQuestionMarks";
+        error.functionName = "updateAMarkingScheme";
         error.statusCode = 500;
         error.msg = "Something went wrong."
         return next(error);
@@ -165,7 +172,8 @@ export async function updateACompleteQuestion(req, res, next) {
     try {
         const {questionId} = req.params;
         const {markingScheme, maxMarks, questionText} = req.body;
-        const question = await Question.findByIdAndUpdate(questionId, {markingScheme, maxMarks, questionText});
+        const question = await Question.findByIdAndUpdate(questionId, {markingScheme, maxMarks, questionText}, {new:true});
+        if(!question) return res.status(404).json({msg : "Question not found."});
         return res.status(200).json({data : question});
     } catch (error) {
         error.functionName = "updateACompleteQuestion";
@@ -178,7 +186,8 @@ export async function updateACompleteQuestion(req, res, next) {
 export async function deleteAQuestion(req, res, next) {
     try {
         const {questionId} = req.params;
-        await Question.findByIdAndDelete(questionId);
+        const question = await Question.findByIdAndDelete(questionId);
+        if(!question) return res.status(404).json({msg : "Question not found."});
         return res.status(200).json({msg : "Successfully deleted!!"});
     } catch (error) {
         error.functionName = "deleteAQuestion";
@@ -194,7 +203,9 @@ export async function viewAllStudentsAnswers(req, res, next) {
         const {assignmentId} = req.params;
 
         const assignmentDet = await Assignment.findById(assignmentId);
-        const studentSubs = await SubmissionAnswer.find({});
+        if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        const submissions = await Submission.find({assignmentId}).select("_id");
+        const studentSubs = await SubmissionAnswer.find({submissionId: {$in: submissions.map(({_id}) => _id)}});
                 
         return res.status(200).json({data:[{assignmentDet}, {studentSubs}]});
 
@@ -210,11 +221,14 @@ export async function compareAllQuestionsAndAnswersOfStudent(req, res, next){
     try {
         const {submissionId} = req.params;
         const submission = await Submission.findById(submissionId);
+        if(!submission) return res.status(404).json({msg : "Submission not found."});
         const allQuestions = await Question.find({assignmentId: submission.assignmentId});
         const submittedAnswers = await SubmissionAnswer.find({submissionId});
 
-        const questionAnswersArray = [];
-        questionAnswersArray.push({question: allQuestions[i], answer:submittedAnswers[i]});
+        const questionAnswersArray = allQuestions.map((question, index) => ({
+            question,
+            answer: submittedAnswers[index]
+        }));
 
         return res.status(200).json({questionAnswersArray});
     } catch (error) {
@@ -229,12 +243,16 @@ export async function compareAllQAndAsWithEvaluationsOfStudent(req, res, next) {
     try {
         const {submissionId} = req.params;
         const submission = await Submission.findById(submissionId);
+        if(!submission) return res.status(404).json({msg : "Submission not found."});
         const allQuestions = await Question.find({assignmentId: submission.assignmentId});
         const submittedAnswers = await SubmissionAnswer.find({submissionId});
         const evaluatedQuestions = await EvaluationQuestion.find({submissionId});
         
-        const qaEvaluationsArray = [];
-        qaEvaluationsArray.push({question: allQuestions[i], answer:submittedAnswers[i], evaluation: evaluatedQuestions[i]});
+        const questionAnswersArray = allQuestions.map((question, index) => ({
+            question,
+            answer: submittedAnswers[index],
+            evaluation: evaluatedQuestions[index]
+        }));
         
         return res.status(200).json({questionAnswersArray});
     } catch (error) {
