@@ -1,4 +1,4 @@
-# Sitaraam API
+# Intern Submission API
 
 An Express and MongoDB API for managing teachers, students, assignments, questions, submissions, and evaluations.
 
