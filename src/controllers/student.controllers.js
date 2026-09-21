@@ -48,6 +48,7 @@ export async function viewAnAssignment(req, res, next) {
         if(studentDet.batchNo){
             const assignmentDet = await Assignment.findById(assignmentId);
             if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+            if(assignmentDet.status !== "LIVE") return res.status(404).json({msg : "Assignment not found."});
             if(assignmentDet.batchNo === studentDet.batchNo) return res.status(200).json({data : assignmentDet});
             return res.status(400).json({msg : "Sorry, you aren't enrolled in this batch."});
         }

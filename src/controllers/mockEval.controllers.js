@@ -52,7 +52,7 @@ export async function InsertingTotalMarksByCalculating(req, res, next) {
         const marksObtained = evaluatedQuestions.reduce((total, item) => total + item.evaluatedMarks, 0);
         const evaluation = await Evaluation.findOneAndUpdate(
             {submissionId},
-            {mockMarks:marksObtained, mockFeedback:await giveMockFeed(), status:"PENDING"},
+            {assignmentId:submission.assignmentId, mockMarks:marksObtained, mockFeedback:await giveMockFeed(), status:"PENDING"},
             {upsert:true, new:true, runValidators:true}
         );
         return res.status(201).json({data:evaluation});

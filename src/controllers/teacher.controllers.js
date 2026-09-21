@@ -10,6 +10,13 @@ import {assignmentInsertionValidations} from '../validations/assignment.validati
 import { Teacher } from "../models/teachers.model.js";
 import {Student} from '../models/student.model.js';
 
+async function findTeacherOwnedQuestion(questionId, teacherId) {
+    const question = await Question.findById(questionId).select("+assignmentId");
+    if(!question) return {question:null, assignment:null};
+    const assignment = await Assignment.findOne({_id:question.assignmentId, teacherId}).select("+teacherId");
+    return {question, assignment};
+}
+
 export async function insertingDoc(req, res, next) {
     try {
         const {data, error} = await teacherInsertionValidations.safeParse(req.body);
@@ -122,9 +129,11 @@ export async function postingQuestions(req, res, next) {
 
 export async function fetchAquestion(req, res, next) {
     try {
+        const teacherId = req.get("teacherId");
         const {questionId} = req.params;
-        const question = await Question.findById(questionId);
+        const {question, assignment} = await findTeacherOwnedQuestion(questionId, teacherId);
         if(!question) return res.status(404).json({msg : "Question not found."});
+        if(!assignment) return res.status(403).json({msg : "You aren't authorized for this question."});
         return res.status(200).json({data : question});
     } catch (error) {
         error.functionName = "fetchAquestion";
@@ -136,10 +145,14 @@ export async function fetchAquestion(req, res, next) {
 
 export async function updateAQuestionText(req, res, next) {
     try {
+        const teacherId = req.get("teacherId");
         const {questionId} = req.params;
         const {questionText} = req.body;
-        const question = await Question.findByIdAndUpdate(questionId, {questionText}, {new:true});
+        const {question, assignment} = await findTeacherOwnedQuestion(questionId, teacherId);
         if(!question) return res.status(404).json({msg : "Question not found."});
+        if(!assignment) return res.status(403).json({msg : "You aren't authorized for this question."});
+        question.questionText = questionText;
+        await question.save();
         return res.status(200).json({data : question});
     } catch (error) {
         error.functionName = "updateAQuestionText";
@@ -151,10 +164,14 @@ export async function updateAQuestionText(req, res, next) {
 
 export async function updateAQuestionMarks(req, res, next) {
     try {
+        const teacherId = req.get("teacherId");
         const {questionId} = req.params;
         const {maxMarks} = req.body;
-        const question = await Question.findByIdAndUpdate(questionId, {maxMarks}, {new:true});
+        const {question, assignment} = await findTeacherOwnedQuestion(questionId, teacherId);
         if(!question) return res.status(404).json({msg : "Question not found."});
+        if(!assignment) return res.status(403).json({msg : "You aren't authorized for this question."});
+        question.maxMarks = maxMarks;
+        await question.save();
         return res.status(200).json({data : question});
     } catch (error) {
         error.functionName = "updateAQuestionMarks";
@@ -166,10 +183,14 @@ export async function updateAQuestionMarks(req, res, next) {
 
 export async function updateAMarkingScheme(req, res, next) {
     try {
+        const teacherId = req.get("teacherId");
         const {questionId} = req.params;
         const {markingScheme} = req.body;
-        const question = await Question.findByIdAndUpdate(questionId, {markingScheme}, {new:true});
+        const {question, assignment} = await findTeacherOwnedQuestion(questionId, teacherId);
         if(!question) return res.status(404).json({msg : "Question not found."});
+        if(!assignment) return res.status(403).json({msg : "You aren't authorized for this question."});
+        question.markingScheme = markingScheme;
+        await question.save();
         return res.status(200).json({data : question});
     } catch (error) {
         error.functionName = "updateAMarkingScheme";
@@ -181,10 +202,16 @@ export async function updateAMarkingScheme(req, res, next) {
 
 export async function updateACompleteQuestion(req, res, next) {
     try {
+        const teacherId = req.get("teacherId");
         const {questionId} = req.params;
         const {markingScheme, maxMarks, questionText} = req.body;
-        const question = await Question.findByIdAndUpdate(questionId, {markingScheme, maxMarks, questionText}, {new:true});
+        const {question, assignment} = await findTeacherOwnedQuestion(questionId, teacherId);
         if(!question) return res.status(404).json({msg : "Question not found."});
+        if(!assignment) return res.status(403).json({msg : "You aren't authorized for this question."});
+        question.markingScheme = markingScheme;
+        question.maxMarks = maxMarks;
+        question.questionText = questionText;
+        await question.save();
         return res.status(200).json({data : question});
     } catch (error) {
         error.functionName = "updateACompleteQuestion";
@@ -196,9 +223,11 @@ export async function updateACompleteQuestion(req, res, next) {
 
 export async function deleteAQuestion(req, res, next) {
     try {
+        const teacherId = req.get("teacherId");
         const {questionId} = req.params;
-        const question = await Question.findById(questionId);
+        const {question, assignment} = await findTeacherOwnedQuestion(questionId, teacherId);
         if(!question) return res.status(404).json({msg : "Question not found."});
+        if(!assignment) return res.status(403).json({msg : "You aren't authorized for this question."});
         await question.deleteOne();
         return res.status(200).json({msg : "Successfully deleted!!"});
     } catch (error) {
@@ -232,9 +261,12 @@ export async function viewAllStudentsAnswers(req, res, next) {
 
 export async function compareAllQuestionsAndAnswersOfStudent(req, res, next){
     try {
+        const teacherId = req.get("teacherId");
         const {submissionId} = req.params;
         const submission = await Submission.findById(submissionId);
         if(!submission) return res.status(404).json({msg : "Submission not found."});
+        const assignment = await Assignment.findOne({_id:submission.assignmentId, teacherId});
+        if(!assignment) return res.status(403).json({msg : "You aren't authorized for this submission."});
         const allQuestions = await Question.find({assignmentId: submission.assignmentId});
         const submittedAnswers = await SubmissionAnswer.find({submissionId});
 
@@ -254,9 +286,12 @@ export async function compareAllQuestionsAndAnswersOfStudent(req, res, next){
 
 export async function compareAllQAndAsWithEvaluationsOfStudent(req, res, next) {
     try {
+        const teacherId = req.get("teacherId");
         const {submissionId} = req.params;
         const submission = await Submission.findById(submissionId);
         if(!submission) return res.status(404).json({msg : "Submission not found."});
+        const assignment = await Assignment.findOne({_id:submission.assignmentId, teacherId});
+        if(!assignment) return res.status(403).json({msg : "You aren't authorized for this submission."});
         const allQuestions = await Question.find({assignmentId: submission.assignmentId});
         const submittedAnswers = await SubmissionAnswer.find({submissionId});
         const evaluatedQuestions = await EvaluationQuestion.find({submissionId});
@@ -376,29 +411,25 @@ export async function analyaticsOfAssignment(req, res, next) {
     try {
         const {assignmentId} = req.params;
         if(!assignmentId) return res.status(403).json({msg : "You aren't authorized for this assignment."});
-        const submissionDet = await Submission.find({assignmentId});
         const assignmentDet = await Assignment.findById(assignmentId);
+        if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        const submissionDet = await Submission.find({assignmentId});
         const studentCount = (await Student.find({batchNo: assignmentDet.batchNo})).length;
-        const evaluationCount = await Submission.find({assignmentId});
-        let sumOfMarks = 0;
-        let highestMarks = -1;
-        let lowestMarks = assignmentDet.totalMarks + 1;
-        let passCount = 0;
-        submissionDet.forEach(async (submission) => {
-            const evaluationDet = await Evaluation.findOne({submissionId:submission._id});
-            sumOfMarks += evaluationDet.mockMarks;
-            highestMarks = max(highestMarks, evaluationDet.mockMarks);
-            lowestMarks = min(lowestMarks, evaluationDet.mockMarks);
-            if(evaluationDet.mockMarks >= assignmentDet.passMarks) passCount+=1;
-        })
-        const avgMarks = sumOfMarks / submissionDet.length;
+        const evaluations = (await Promise.all(
+            submissionDet.map((submission) => Evaluation.findOne({submissionId:submission._id}))
+        )).filter(Boolean);
+        const marks = evaluations.map(({mockMarks}) => mockMarks);
+        const sumOfMarks = marks.reduce((sum, mark) => sum + mark, 0);
+        const evaluationCount = evaluations.length;
+        const passCount = marks.filter((mark) => mark >= assignmentDet.passMarks).length;
+        const avgMarks = evaluationCount ? sumOfMarks / evaluationCount : 0;
         return res.status(200).json({
             data:{
                 studentCount,
                 evaluationCount,
                 avgMarks,
-                highestMarks,
-                lowestMarks,
+                highestMarks: evaluationCount ? Math.max(...marks) : null,
+                lowestMarks: evaluationCount ? Math.min(...marks) : null,
                 passCount,
                 failCount:evaluationCount-passCount
             }
@@ -415,14 +446,17 @@ export async function analyaticsOfAssignment(req, res, next) {
 
 export async function resultsOfAStudentOfAssignment(req, res, next) {
     try {
+        const teacherId = req.get("teacherId");
         const {studentId} = req.params;
         const {assignmentId} = req.params;
         const submission = await Submission.findOne({studentId, assignmentId});
         if(!submission) return res.status(404).json({msg : "Submission not found."});
+        const assignment = await Assignment.findOne({_id:assignmentId, teacherId});
+        if(!assignment) return res.status(403).json({msg : "You aren't authorized for this assignment."});
 
         const allQuestions = await Question.find({assignmentId: submission.assignmentId});
-        const submittedAnswers = await SubmissionAnswer.find({submissionId:submission.assignmentId});
-        const evaluatedQuestions = await EvaluationQuestion.find({submissionId:submission.assignmentId});
+        const submittedAnswers = await SubmissionAnswer.find({submissionId:submission._id});
+        const evaluatedQuestions = await EvaluationQuestion.find({submissionId:submission._id});
         const questionAnswersArray = allQuestions.map((question) => ({
             question,
             answer: submittedAnswers.find((answer) => String(answer.questionId) === String(question._id)),
@@ -442,7 +476,7 @@ export async function resultsOfAStudentOfAssignment(req, res, next) {
 export async function statusOfAssignments(req, res, next) {
     try {
         const {status} = req.query;
-        if(status !== "PENDING"|| status !==  "LIVE" ||status !== "CLOSED") return res.status(404).json({msg : "Invalid Input."});
+        if(status !== "PENDING" && status !== "LIVE" && status !== "CLOSED") return res.status(400).json({msg : "Invalid Input."});
         const assignmentDet = await Assignment.find({status});
         return res.status(200).json({data : assignmentDet});
     } catch (error) {
@@ -453,52 +487,69 @@ export async function statusOfAssignments(req, res, next) {
     }
 }
 
-export async function fetchStudentWithMinimumMarks(req, res, next){
+export async function fetchStudentWithMarksGreaterThan(req, res, next){
     try {
         const {minMarks} = req.query;
         const {assignmentId} = req.params;
-        if(!minMarks) res.status(404).json({msg : "Minimum marks not given!!"});
+        const minimumMarks = Number(minMarks);
+        if(minMarks === undefined || !Number.isFinite(minimumMarks)) return res.status(400).json({msg : "Minimum marks must be a number."});
 
-        const evaluationDet = await Evaluation.find({assignmentId, mockMarks:{$gt: minMarks}});
-        evaluationDet.forEach(async (doc) => {
-            const submissionDet = await Submission.findById(doc.submissionId);
+        const evaluations = await Evaluation.find({assignmentId, mockMarks:{$gt: minimumMarks}});
+        const evaluationArr = await Promise.all(evaluations.map(async (evaluation) => {
+            const submissionDet = await Submission.findById(evaluation.submissionId);
+            if(!submissionDet) return null;
             const studentDet = await Student.findById(submissionDet.studentId);
-
-            return res.status(200).json({data : {studentDet, evaluationDet}});
-        })
+            return {studentDet, evaluation};
+        }));
+        return res.status(200).json({data : evaluationArr.filter(Boolean)});
 
     } catch (error) {
-        error.functionName = "fetchStudentWithMinimumMarks";
+        error.functionName = "fetchStudentWithMarksGreaterThan";
         error.statusCode = 500;
         error.msg = "Something went wrong."
         return next(error);
     }
 }
 
-/*
-export async function sortEvaluations(req, res, next){
+export async function sortEvaluationsBasedOnMarks(req, res, next){
     try {
-        const {sort} = req.query;
+        const {marks} = req.query;
         const {assignmentId} = req.params;
-        if(!minMarks) res.status(404).json({msg : "Minimum marks not given!!"});
+        const sortOrder = marks === "asc" ? 1 : marks === "desc" ? -1 : Number(marks);
+        if(![1, -1].includes(sortOrder)) return res.status(400).json({msg : "Sort must be asc, desc, 1, or -1."});
 
-        const evaluationDet = await Evaluation.find({assignmentId, mockMarks:{$gt: minMarks}});
-        evaluationDet.forEach(async (doc) => {
-            const submissionDet = await Submission.findById(doc.submissionId);
+        const evaluations = await Evaluation.find({assignmentId}).sort({mockMarks:sortOrder});
+        const evaluationArr = await Promise.all(evaluations.map(async (evaluation) => {
+            const submissionDet = await Submission.findById(evaluation.submissionId);
+            if(!submissionDet) return null;
             const studentDet = await Student.findById(submissionDet.studentId);
-
-            return res.status(200).json({data : {studentDet, evaluationDet}});
-        })
-
+            return {studentDet, evaluation};
+        }));
+        return res.status(200).json({data : evaluationArr.filter(Boolean)});
     } catch (error) {
-        error.functionName = "fetchStudentWithMinimumMarks";
+        error.functionName = "sortEvaluationsBasedOnMarks";
         error.statusCode = 500;
         error.msg = "Something went wrong."
         return next(error);
     }
 }
-    */
+    
+export async function fetchResultsRollNowise(req, res, next) {
+    try {
+        const {assignmentId} = req.params;
+        const submissionDet = await Submission.find({assignmentId}).sort({studentId:1});
+        const results = await Promise.all(submissionDet.map((submission) =>
+            Evaluation.findOne({submissionId:submission._id})
+        ));
+        return res.status(200).json({data : results});
+    } catch (error) {
+        error.functionName = "fetchResultsRollNowise";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
 
+}
 
 /**
  * ?status=APPROVED
