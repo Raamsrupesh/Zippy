@@ -11,6 +11,8 @@ export async function teachersMiddleware(req, res, next) {
         next();
     } catch (error) {
         error.functionName = "teachersMiddleware";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
         return res.status(500).json({msg : "Something went wrong!!"});
     }    
 }

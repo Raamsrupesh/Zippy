@@ -13,6 +13,8 @@ export async function studentMiddleware(req, res, next) {
         next();
     } catch (error) {
         error.functionName = "studentMiddleware";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
         return res.status(500).json({msg : "Something went wrong", error})
     }
 }
