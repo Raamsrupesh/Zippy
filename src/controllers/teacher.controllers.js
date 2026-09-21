@@ -442,6 +442,7 @@ export async function resultsOfAStudentOfAssignment(req, res, next) {
 export async function statusOfAssignments(req, res, next) {
     try {
         const {status} = req.query;
+        if(status !== "PENDING"|| status !==  "LIVE" ||status !== "CLOSED") return res.status(404).json({msg : "Invalid Input."});
         const assignmentDet = await Assignment.find({status});
         return res.status(200).json({data : assignmentDet});
     } catch (error) {
@@ -452,3 +453,56 @@ export async function statusOfAssignments(req, res, next) {
     }
 }
 
+export async function fetchStudentWithMinimumMarks(req, res, next){
+    try {
+        const {minMarks} = req.query;
+        const {assignmentId} = req.params;
+        if(!minMarks) res.status(404).json({msg : "Minimum marks not given!!"});
+
+        const evaluationDet = await Evaluation.find({assignmentId, mockMarks:{$gt: minMarks}});
+        evaluationDet.forEach(async (doc) => {
+            const submissionDet = await Submission.findById(doc.submissionId);
+            const studentDet = await Student.findById(submissionDet.studentId);
+
+            return res.status(200).json({data : {studentDet, evaluationDet}});
+        })
+
+    } catch (error) {
+        error.functionName = "fetchStudentWithMinimumMarks";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
+/*
+export async function sortEvaluations(req, res, next){
+    try {
+        const {sort} = req.query;
+        const {assignmentId} = req.params;
+        if(!minMarks) res.status(404).json({msg : "Minimum marks not given!!"});
+
+        const evaluationDet = await Evaluation.find({assignmentId, mockMarks:{$gt: minMarks}});
+        evaluationDet.forEach(async (doc) => {
+            const submissionDet = await Submission.findById(doc.submissionId);
+            const studentDet = await Student.findById(submissionDet.studentId);
+
+            return res.status(200).json({data : {studentDet, evaluationDet}});
+        })
+
+    } catch (error) {
+        error.functionName = "fetchStudentWithMinimumMarks";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+    */
+
+
+/**
+ * ?status=APPROVED
+    ?minMarks=70
+    ?sort=marks
+    
+ */

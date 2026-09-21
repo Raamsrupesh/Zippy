@@ -6,6 +6,11 @@ const evaluationSchema = new mongoose.Schema({
         ref:"Submission",
         required:true
     },
+    assignmentId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"Assignment",
+        required:true
+    },
     mockMarks:{
         type:Number,
         required:true,
