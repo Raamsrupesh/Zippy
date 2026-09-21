@@ -1,4 +1,4 @@
-# Intern Submission API
+# Student Teacher Interaction API
 
 An Express and MongoDB API for managing teachers, students, assignments, questions, submissions, and evaluations.
 
