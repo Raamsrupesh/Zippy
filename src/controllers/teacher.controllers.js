@@ -439,3 +439,16 @@ export async function resultsOfAStudentOfAssignment(req, res, next) {
     }
 }
 
+export async function statusOfAssignments(req, res, next) {
+    try {
+        const {status} = req.query;
+        const assignmentDet = await Assignment.find({status});
+        return res.status(200).json({data : assignmentDet});
+    } catch (error) {
+        error.functionName = "liveAssignments";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
