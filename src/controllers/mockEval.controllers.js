@@ -9,7 +9,7 @@ import { giveMockFeed, AICorrectionService} from '../services/AIService.services
 
 /**
  * Actually, This controller should be implemented with AI but since the time 
- * given is less (1 day), I'm just using inbuilt functions and showing demo how actually
+ * given is less (1 day), I'm just using inbuilt functions and showing demo how actually the route
  * works for the time being..
  */
 export async function evaluatingAndGiveFeedbackDemo(req, res, next) {
