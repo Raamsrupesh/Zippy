@@ -1,4 +1,4 @@
-import { creatingAssignment, fetchAnAssignment, deletingAnAssignment, updatingAnAssignment, postingQuestions, fetchAquestion, updateAQuestionText, updateAQuestionMarks, updateAMarkingScheme, updateACompleteQuestion, deleteAQuestion, viewAllStudentsAnswers, compareAllQuestionsAndAnswersOfStudent, compareAllQAndAsWithEvaluationsOfStudent, approveTheAssignmentForThisStudent, updateTheMarksForThisStudent, makeTheAssignmentLive, closeTheAssignment, insertingDoc } from "../controllers/teacher.controllers.js";
+import { creatingAssignment, fetchAnAssignment, deletingAnAssignment, updatingAnAssignment, postingQuestions, fetchAquestion, updateAQuestionText, updateAQuestionMarks, updateAMarkingScheme, updateACompleteQuestion, deleteAQuestion, viewAllStudentsAnswers, compareAllQuestionsAndAnswersOfStudent, compareAllQAndAsWithEvaluationsOfStudent, approveTheAssignmentForThisStudent, updateTheMarksForThisStudent, makeTheAssignmentLive, closeTheAssignment, insertingDoc, analyaticsOfAssignment } from "../controllers/teacher.controllers.js";
 import { evaluatingAndGiveFeedbackDemo, InsertingTotalMarksByCalculating } from "../controllers/mockEval.controllers.js";
 import express from "express";
 const router = express.Router();
@@ -24,5 +24,6 @@ router.patch("/assignment/:assignmentId/live", makeTheAssignmentLive);
 router.patch("/assignment/:assignmentId/close", closeTheAssignment);
 router.patch("/assignment/:assignmentId/student/:studentId/approve", approveTheAssignmentForThisStudent);
 router.patch("/assignment/:assignmentId/student/:studentId/marks", updateTheMarksForThisStudent);
+router.get("/assignment/:assignmentId/analytics", analyaticsOfAssignment);
 
 export default router;

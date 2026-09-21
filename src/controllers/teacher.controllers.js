@@ -8,6 +8,7 @@ import {isTeacherAuthorizedForThisBatch} from '../utils/teacherBatchAuth.utils.j
 import {teacherInsertionValidations} from '../validations/teacher.validations.js'
 import {assignmentInsertionValidations} from '../validations/assignment.validations.js'
 import { Teacher } from "../models/teachers.model.js";
+import {Student} from '../models/student.model.js';
 
 export async function insertingDoc(req, res, next) {
     try {
@@ -365,6 +366,47 @@ export async function closeTheAssignment(req, res, next) {
 
     } catch (error) {
         error.functionName = "closeTheAssignment";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
+export async function analyaticsOfAssignment(req, res, next) {
+    try {
+        const {assignmentId} = req.params;
+        if(!assignmentId) return res.status(403).json({msg : "You aren't authorized for this assignment."});
+        const submissionDet = await Submission.find({assignmentId});
+        const assignmentDet = await Assignment.findById(assignmentId);
+        const studentCount = (await Student.find({batchNo: assignmentDet.batchNo})).length;
+        const evaluationCount = await Submission.find({assignmentId});
+        let sumOfMarks = 0;
+        let highestMarks = -1;
+        let lowestMarks = assignmentDet.totalMarks + 1;
+        let passCount = 0;
+        submissionDet.forEach(async (submission) => {
+            const evaluationDet = await Evaluation.findOne({submissionId:submission._id});
+            sumOfMarks += evaluationDet.mockMarks;
+            highestMarks = max(highestMarks, evaluationDet.mockMarks);
+            lowestMarks = min(lowestMarks, evaluationDet.mockMarks);
+            if(evaluationDet.mockMarks >= assignmentDet.passMarks) passCount+=1;
+        })
+        const avgMarks = sumOfMarks / submissionDet.length;
+        return res.status(200).json({
+            data:{
+                studentCount,
+                evaluationCount,
+                avgMarks,
+                highestMarks,
+                lowestMarks,
+                passCount,
+                failCount:evaluationCount-passCount
+            }
+        });
+
+
+    } catch (error) {
+        error.functionName = "analyaticsOfAssignment";
         error.statusCode = 500;
         error.msg = "Something went wrong."
         return next(error);

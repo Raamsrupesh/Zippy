@@ -31,7 +31,11 @@ const assignmentModel = new mongoose.Schema({
         enum:['PENDING', 'LIVE', 'CLOSED'],
         default:"PENDING",
         required:true
-    }
+    },
+    passMarks:{
+        type:Number,
+        required:true
+    },
 },{timestamps:true});
 
 export const Assignment = mongoose.model("Assignment", assignmentModel);
