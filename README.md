@@ -1,4 +1,4 @@
-# Student Teacher Interaction API
+# Student Teacher Interaction APIs
 
 An Express and MongoDB API for managing teachers, students, assignments, questions, submissions, and evaluations.
 
