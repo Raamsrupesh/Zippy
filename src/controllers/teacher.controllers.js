@@ -267,7 +267,7 @@ export async function compareAllQAndAsWithEvaluationsOfStudent(req, res, next) {
             evaluation: evaluatedQuestions.find((evaluation) => String(evaluation.questionId) === String(question._id))
         }));
         
-        return res.status(200).json({questionAnswersArray});
+        return res.status(200).json({data: questionAnswersArray});
     } catch (error) {
         error.functionName = "compareAllQAndAsWithEvaluationsOfStudent";
         error.statusCode = 500;
@@ -412,3 +412,30 @@ export async function analyaticsOfAssignment(req, res, next) {
         return next(error);
     }
 }
+
+export async function resultsOfAStudentOfAssignment(req, res, next) {
+    try {
+        const {studentId} = req.params;
+        const {assignmentId} = req.params;
+        const submission = await Submission.findOne({studentId, assignmentId});
+        if(!submission) return res.status(404).json({msg : "Submission not found."});
+
+        const allQuestions = await Question.find({assignmentId: submission.assignmentId});
+        const submittedAnswers = await SubmissionAnswer.find({submissionId:submission.assignmentId});
+        const evaluatedQuestions = await EvaluationQuestion.find({submissionId:submission.assignmentId});
+        const questionAnswersArray = allQuestions.map((question) => ({
+            question,
+            answer: submittedAnswers.find((answer) => String(answer.questionId) === String(question._id)),
+            evaluation: evaluatedQuestions.find((evaluation) => String(evaluation.questionId) === String(question._id))
+        }));
+        
+        return res.status(200).json({data: questionAnswersArray});
+
+    } catch (error) {
+        error.functionName = "resultsOfAStudentOfAssignment";
+        error.statusCode = 500;
+        error.msg = "Something went wrong."
+        return next(error);
+    }
+}
+
