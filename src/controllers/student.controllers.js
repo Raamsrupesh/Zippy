@@ -9,7 +9,7 @@ import {studentInsertionValidations} from '../validations/student.validations.js
 export async function insertingDoc(req, res, next) {
     try {
         const {data, error} = await studentInsertionValidations.safeParse(req.body);
-        if(error) return res.status(400).json({msg : error.errors[0].message});
+        if(error) return res.status(400).json({msg : error.issues[0].message});
 
         await Student.insertOne(data);
         return res.status(201).json({msg : "Inserted the student doc!!"});
@@ -66,7 +66,7 @@ export async function answerQuestionSubmit(req, res, next) {
         const {assignmentId} = req.params;
         const {questionId} = req.params;
         const {answerText} = req.body;
-        if(answerText === "") return res.status(400).json({msg : "No answer exists."});
+        if(typeof answerText !== "string" || !answerText.trim()) return res.status(400).json({msg : "No answer exists."});
         const studentDet = await Student.findById(studentId);
         const assignmentDet = await Assignment.findById(assignmentId);
         if(!studentDet) return res.status(404).json({msg : "Student not found."});
@@ -75,8 +75,15 @@ export async function answerQuestionSubmit(req, res, next) {
             return res.status(409).json({msg : "The assignment is not live currently."});
         }
         if(studentDet.batchNo === assignmentDet.batchNo){
-                const submissionDet = await Submission.insertOne({studentId, assignmentId});
-                await SubmissionAnswer.insertOne({submissionId:submissionDet._id, questionId, answerText});
+                const questionDet = await Question.findOne({_id:questionId, assignmentId});
+                if(!questionDet) return res.status(404).json({msg : "Question not found for this assignment."});
+                let submissionDet = await Submission.findOne({studentId, assignmentId});
+                if(!submissionDet) submissionDet = await Submission.create({studentId, assignmentId});
+                await SubmissionAnswer.findOneAndUpdate(
+                    {submissionId:submissionDet._id, questionId},
+                    {answerText:answerText.trim()},
+                    {upsert:true, new:true, runValidators:true}
+                );
 
                 return res.status(201).json({msg : `Successfully inserted the answer of question : ${questionId}.`});
         }
@@ -93,11 +100,14 @@ export async function answerQuestionSubmit(req, res, next) {
 export async function viewThePrecisedResults(req, res, next) {
     try {
         const {assignmentId} = req.params;
+        const studentId = req.get("studentId");
+        const submission = await Submission.findOne({studentId, assignmentId});
+        if(!submission) return res.status(404).json({msg : "Submission not found."});
         const questionDet = await Question.find({assignmentId});
         const combinedArray = [];
         for (let i = 0; i < questionDet.length; i++) {
-            const evaluationDet = await EvaluationQuestion.findOne({questionId:questionDet[i]._id});
-            const submissionAnswerDet = await SubmissionAnswer.findOne({questionId:questionDet[i]._id});
+            const evaluationDet = await EvaluationQuestion.findOne({submissionId:submission._id, questionId:questionDet[i]._id});
+            const submissionAnswerDet = await SubmissionAnswer.findOne({submissionId:submission._id, questionId:questionDet[i]._id});
             combinedArray.push({question:questionDet[i], givenAnswer:submissionAnswerDet, evaluation:evaluationDet});
         }
         return res.status(200).json({data : combinedArray});
@@ -115,8 +125,9 @@ export async function viewOverallMarks(req, res, next) {
         const studentId = req.get("studentId");
         const {assignmentId} = req.params;
         const submissionDet = await Submission.findOne({studentId, assignmentId});
-        
-        const evaluationDet = await Evaluation.findOne({submissionId:submissionDet._id});
+        if(!submissionDet) return res.status(404).json({msg : "Submission not found."});
+        const evaluationDet = await Evaluation.findOne({submissionId:submissionDet._id, status:"APPROVED"});
+        if(!evaluationDet) return res.status(404).json({msg : "Evaluation not found."});
         return res.status(200).json({data : evaluationDet});
         
     } catch (error) {

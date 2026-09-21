@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const evaluationSchema = new mongoose.Schema({
     submissionId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:"Submissions",
+        ref:"Submission",
         required:true
     },
     mockMarks:{
@@ -17,7 +17,8 @@ const evaluationSchema = new mongoose.Schema({
     status:{
         type:String,
         enum:['APPROVED', 'PENDING'],
-        required:true
+        required:true,
+        default:"PENDING"
     }
 });
 

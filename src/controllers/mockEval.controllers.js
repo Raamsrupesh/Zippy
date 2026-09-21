@@ -18,13 +18,20 @@ export async function evaluatingAndGiveFeedbackDemo(req, res, next) {
 
         // const assignmentDet = await Assignment.findById(assignmentId);
         const submissionAnswerDet = await SubmissionAnswer.findById(submissionAnswerId);
+        if(!submissionAnswerDet) return res.status(404).json({msg : "Submission answer not found."});
         const submissionDet = await Submission.findById(submissionAnswerDet.submissionId)
+        if(!submissionDet) return res.status(404).json({msg : "Submission not found."});
         const questionDet = await Question.findById(submissionAnswerDet.questionId);
+        if(!questionDet) return res.status(404).json({msg : "Question not found."});
         
         // The below is the demo feature of AI.
         const {marksObtained, feedBackGivenByAI = ""} = await AICorrectionService(questionDet, submissionAnswerDet.answerText);
 
-        await EvaluationQuestion.insertOne({submissionId:submissionDet._id, questionId:questionDet._id, evaluatedMarks:marksObtained, evaluatedFeed:feedBackGivenByAI});
+        await EvaluationQuestion.findOneAndUpdate(
+            {submissionId:submissionDet._id, questionId:questionDet._id},
+            {evaluatedMarks:marksObtained, evaluatedFeed:feedBackGivenByAI},
+            {upsert:true, new:true, runValidators:true}
+        );
         return res.status(201).json({msg : "Successfully inserted into the evaluations!"});
 
     } catch (error) {
@@ -39,15 +46,16 @@ export async function InsertingTotalMarksByCalculating(req, res, next) {
     try {
         const {submissionId} = req.params;
 
-        const result = await EvaluationQuestion.aggregate([
-            {$match:{submissionId}},
-            {$group: {
-                _id: "$submissionId",
-                totalMarks: {$sum : '$evaluatedMarks'}
-            }},
-        ]);
-        const marksObtained = result[0]?.totalMarks || 0;
-        await Evaluation.insertOne({submissionId, mockMarks:marksObtained, mockFeedback:giveMockFeed()});
+        const submission = await Submission.findById(submissionId);
+        if(!submission) return res.status(404).json({msg : "Submission not found."});
+        const evaluatedQuestions = await EvaluationQuestion.find({submissionId});
+        const marksObtained = evaluatedQuestions.reduce((total, item) => total + item.evaluatedMarks, 0);
+        const evaluation = await Evaluation.findOneAndUpdate(
+            {submissionId},
+            {mockMarks:marksObtained, mockFeedback:await giveMockFeed(), status:"PENDING"},
+            {upsert:true, new:true, runValidators:true}
+        );
+        return res.status(201).json({data:evaluation});
 
     } catch (error) {
         error.functionName = "InsertingTotalMarksByCalculating";

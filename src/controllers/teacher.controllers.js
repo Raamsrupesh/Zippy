@@ -8,13 +8,12 @@ import {isTeacherAuthorizedForThisBatch} from '../utils/teacherBatchAuth.utils.j
 import {teacherInsertionValidations} from '../validations/teacher.validations.js'
 import {assignmentInsertionValidations} from '../validations/assignment.validations.js'
 import { Teacher } from "../models/teachers.model.js";
-import { log } from "node:console";
 
 export async function insertingDoc(req, res, next) {
     try {
         const {data, error} = await teacherInsertionValidations.safeParse(req.body);
-        if(error) return res.status(400).json({msg : error.errors[0].message})
-        await Teacher.insertOne(data);
+        if(error) return res.status(400).json({msg : error.issues[0].message})
+        await Teacher.create(data);
         return res.status(201).json({msg : "Inserted the teacher doc!!"});
     } catch (error) {
         error.functionName = "insertingDoc";
@@ -29,12 +28,11 @@ export async function creatingAssignment(req, res, next) {
         const teacherId = req.get("teacherId");
         if(!teacherId) return res.status(400).json({msg : "No teacherId present."});
         
-        const{data, error} = await assignmentInsertionValidations.safeParse(req.body);
-        if(error) return res.status(400).json({msg : error.errors[0].message});
-        // Validations
+        const{data, error} = assignmentInsertionValidations.safeParse(req.body);
+        if(error) return res.status(400).json({msg : error.issues[0].message});
 
-        if(await isTeacherAuthorizedForThisBatch(teacherId, batchNo)){
-            await Assignment.insertOne(data);
+        if(await isTeacherAuthorizedForThisBatch(teacherId, data.batchNo)){
+            await Assignment.insertOne({...data, teacherId});
             return res.status(201).json({msg : "Created assignment successfully!!"});
         }
         return res.status(400).json({msg :"You aren't allocated to this batch..."});
@@ -50,8 +48,9 @@ export async function fetchAnAssignment(req, res, next) {
     try {
         const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
-        const assignmentDet = await Assignment.findById(assignmentId);
+        const assignmentDet = await Assignment.findById(assignmentId).select("+teacherId");
         if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        if(String(assignmentDet.teacherId) !== String(teacherId)) return res.status(403).json({msg : "You aren't authorized for this assignment."});
         return res.status(200).json({data : assignmentDet});
     } catch (error) {
         error.functionName = "fetchAnAssignment";
@@ -65,8 +64,10 @@ export async function deletingAnAssignment(req, res, next) {
     try {
         const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
-        const assignmentDet = await Assignment.findByIdAndDelete(assignmentId);
+        const assignmentDet = await Assignment.findById(assignmentId).select("+teacherId");
         if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        if(String(assignmentDet.teacherId) !== String(teacherId)) return res.status(403).json({msg : "You aren't authorized for this assignment."});
+        await assignmentDet.deleteOne();
         return res.status(200).json({msg : "Successfully deleted!!"});
     } catch (error) {
         error.functionName = "deletingAnAssignment";
@@ -82,8 +83,10 @@ export async function updatingAnAssignment(req, res, next) {
         const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
         const {title, description, totalMarks} = req.body;
-        const assignmentDet = await Assignment.findByIdAndUpdate(assignmentId, {title, description, totalMarks, teacherId}, {new:true});
-        if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        const existingAssignment = await Assignment.findById(assignmentId).select("+teacherId");
+        if(!existingAssignment) return res.status(404).json({msg : "Assignment not found."});
+        if(String(existingAssignment.teacherId) !== String(teacherId)) return res.status(403).json({msg : "You aren't authorized for this assignment."});
+        const assignmentDet = await Assignment.findByIdAndUpdate(assignmentId, {title, description, totalMarks}, {new:true, runValidators:true});
         return res.status(200).json({data : assignmentDet});
 
     } catch (error) {
@@ -99,8 +102,10 @@ export async function postingQuestions(req, res, next) {
         const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
         const {questionsDetails} = req.body;
-        const assignmentDet = await Assignment.findById(assignmentId);
+        const assignmentDet = await Assignment.findById(assignmentId).select("+teacherId");
         if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        if(String(assignmentDet.teacherId) !== String(teacherId)) return res.status(403).json({msg : "You aren't authorized for this assignment."});
+        if(!Array.isArray(questionsDetails) || questionsDetails.length === 0) return res.status(400).json({msg : "questionsDetails must be a non-empty array."});
         await Promise.all(questionsDetails.map((questionDetails) =>
             Question.insertOne({assignmentId, ...questionDetails})
         ));
@@ -191,8 +196,9 @@ export async function updateACompleteQuestion(req, res, next) {
 export async function deleteAQuestion(req, res, next) {
     try {
         const {questionId} = req.params;
-        const question = await Question.findByIdAndDelete(questionId);
+        const question = await Question.findById(questionId);
         if(!question) return res.status(404).json({msg : "Question not found."});
+        await question.deleteOne();
         return res.status(200).json({msg : "Successfully deleted!!"});
     } catch (error) {
         error.functionName = "deleteAQuestion";
@@ -207,8 +213,9 @@ export async function viewAllStudentsAnswers(req, res, next) {
         const teacherId = req.get("teacherId");
         const {assignmentId} = req.params;
 
-        const assignmentDet = await Assignment.findById(assignmentId);
+        const assignmentDet = await Assignment.findById(assignmentId).select("+teacherId");
         if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        if(String(assignmentDet.teacherId) !== String(teacherId)) return res.status(403).json({msg : "You aren't authorized for this assignment."});
         const submissions = await Submission.find({assignmentId}).select("_id");
         const studentSubs = await SubmissionAnswer.find({submissionId: {$in: submissions.map(({_id}) => _id)}});
                 
@@ -230,9 +237,9 @@ export async function compareAllQuestionsAndAnswersOfStudent(req, res, next){
         const allQuestions = await Question.find({assignmentId: submission.assignmentId});
         const submittedAnswers = await SubmissionAnswer.find({submissionId});
 
-        const questionAnswersArray = allQuestions.map((question, index) => ({
+        const questionAnswersArray = allQuestions.map((question) => ({
             question,
-            answer: submittedAnswers[index]
+            answer: submittedAnswers.find((answer) => String(answer.questionId) === String(question._id))
         }));
 
         return res.status(200).json({questionAnswersArray});
@@ -253,10 +260,10 @@ export async function compareAllQAndAsWithEvaluationsOfStudent(req, res, next) {
         const submittedAnswers = await SubmissionAnswer.find({submissionId});
         const evaluatedQuestions = await EvaluationQuestion.find({submissionId});
         
-        const questionAnswersArray = allQuestions.map((question, index) => ({
+        const questionAnswersArray = allQuestions.map((question) => ({
             question,
-            answer: submittedAnswers[index],
-            evaluation: evaluatedQuestions[index]
+            answer: submittedAnswers.find((answer) => String(answer.questionId) === String(question._id)),
+            evaluation: evaluatedQuestions.find((evaluation) => String(evaluation.questionId) === String(question._id))
         }));
         
         return res.status(200).json({questionAnswersArray});
@@ -273,8 +280,12 @@ export async function approveTheAssignmentForThisStudent(req, res, next) {
         const teacherId = req.get("teacherId");
         const {studentId} = req.params;
         const {assignmentId} = req.params;
-        
-        await Evaluation.findOneAndUpdate({studentId, assignmentId}, {status:"APPROVED"});
+        const assignment = await Assignment.findOne({_id:assignmentId, teacherId}).select("+teacherId");
+        if(!assignment) return res.status(403).json({msg : "You aren't authorized for this assignment."});
+        const submission = await Submission.findOne({studentId, assignmentId});
+        if(!submission) return res.status(404).json({msg : "Submission not found."});
+        const evaluation = await Evaluation.findOneAndUpdate({submissionId:submission._id}, {status:"APPROVED"}, {new:true});
+        if(!evaluation) return res.status(404).json({msg : "Evaluation not found."});
         return res.status(200).json({msg : "Successfully updated the evaluations!!"});
         
     } catch (error) {
@@ -290,10 +301,16 @@ export async function updateTheMarksForThisStudent(req, res, next) {
         const teacherId = req.get("teacherId");
         const {studentId} = req.params;
         const {assignmentId} = req.params;
-        
+        const assignment = await Assignment.findOne({_id:assignmentId, teacherId}).select("+teacherId");
+        if(!assignment) return res.status(403).json({msg : "You aren't authorized for this assignment."});
         const {mockMarks, mockFeedback} = req.body;
-        if(mockFeedback !== "") await Evaluations.findOneAndUpdate({studentId, assignmentId}, {mockMarks, mockFeedback, status:"APPROVED"});
-        else await Evaluation.findOneAndUpdate({studentId, assignmentId}, {mockMarks, status:"APPROVED"});
+        const submission = await Submission.findOne({studentId, assignmentId});
+        if(!submission) return res.status(404).json({msg : "Submission not found."});
+        const update = mockFeedback !== undefined && mockFeedback !== ""
+            ? {mockMarks, mockFeedback, status:"APPROVED"}
+            : {mockMarks, status:"APPROVED"};
+        const evaluation = await Evaluation.findOneAndUpdate({submissionId:submission._id}, update, {new:true, runValidators:true});
+        if(!evaluation) return res.status(404).json({msg : "Evaluation not found."});
         return res.status(200).json({msg : "Successfully updated the evaluations!!"});
         
     } catch (error) {
@@ -309,9 +326,11 @@ export async function makeTheAssignmentLive(req, res, next) {
         const teacherId = req.get("teacherId"); 
         const {assignmentId} = req.params;
 
-        const assignmentDet = await Assignment.findById(assignmentId);
+        const assignmentDet = await Assignment.findById(assignmentId).select("+teacherId");
         const teacherDet = await Teacher.findById(teacherId);
-        if(teacherDet.batchNo.includes(assignmentDet.batchNo)){
+        if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        if(!teacherDet) return res.status(404).json({msg : "Teacher not found."});
+        if(String(assignmentDet.teacherId) === String(teacherId)){
             assignmentDet.status = "LIVE";
             await assignmentDet.save();
 
@@ -332,9 +351,11 @@ export async function closeTheAssignment(req, res, next) {
         const teacherId = req.get("teacherId"); 
         const {assignmentId} = req.params;
 
-        const assignmentDet = await Assignment.findById(assignmentId);
+        const assignmentDet = await Assignment.findById(assignmentId).select("+teacherId");
         const teacherDet = await Teacher.findById(teacherId);
-        if(teacherDet.batchNo.includes(assignmentDet.batchNo)){
+        if(!assignmentDet) return res.status(404).json({msg : "Assignment not found."});
+        if(!teacherDet) return res.status(404).json({msg : "Teacher not found."});
+        if(String(assignmentDet.teacherId) === String(teacherId)){
             assignmentDet.status = "CLOSED";
             await assignmentDet.save();
 

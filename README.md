@@ -86,6 +86,12 @@ All teacher routes start with `/teacher`.
 | GET | `/teacher/assignment/answers/:assignmentId` | View answers for an assignment | `200` |
 | GET | `/teacher/assignment/compareQAs/:submissionId` | Compare questions and answers | `200` |
 | GET | `/teacher/assignment/compareQAswithEval/:submissionId` | Compare questions, answers, and evaluations | `200` |
+| POST | `/teacher/submission-answer/:submissionAnswerId/evaluate` | Evaluate one submitted answer | `201` |
+| POST | `/teacher/submission/:submissionId/calculate-marks` | Calculate total evaluation marks | `201` |
+| PATCH | `/teacher/assignment/:assignmentId/live` | Make an assignment live | `200` |
+| PATCH | `/teacher/assignment/:assignmentId/close` | Close an assignment | `200` |
+| PATCH | `/teacher/assignment/:assignmentId/student/:studentId/marks` | Update student marks and approve | `200` |
+| PATCH | `/teacher/assignment/:assignmentId/student/:studentId/approve` | Approve student evaluation | `200` |
 
 Example assignment body:
 
@@ -121,6 +127,8 @@ All student routes start with `/student`.
 | GET | `/student/viewassignments` | View live assignments for the student's batch | `200` |
 | GET | `/student/viewassignment/:assignmentId` | View one assignment in the student's batch | `200` |
 | POST | `/student/answerassignment/:assignmentId/:questionId` | Submit an answer | `201` |
+| GET | `/student/assignment/:assignmentId/results` | View per-question results | `200` |
+| GET | `/student/assignment/:assignmentId/marks` | View approved total marks | `200` |
 
 Example answer body:
 
@@ -144,4 +152,4 @@ Example answer body:
 
 - Start only one server on port `3000`. Starting another one causes `EADDRINUSE`.
 - The API currently uses headers as simple role checks; production authentication should use signed tokens or sessions.
-- The controller functions for approving evaluations, updating student marks, making assignments live, and closing assignments exist but are not currently registered in the teacher router. They are not available through Thunder Client until routes and their evaluation data contract are added.
+- Teacher passwords are hashed with Argon2 before they are saved.
